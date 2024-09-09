@@ -89,6 +89,7 @@ int main()
     }
     else
     {
+        printf("%c \n", action);
         perror("Unsupported operation");
         close(client_fd);
         close(server_fd);

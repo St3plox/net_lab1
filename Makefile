@@ -56,6 +56,9 @@ run-server: server
 run-client: client
 	./$(CLIENT_BIN)
 
+run-go:
+	go run ./go
+
 # Clean all generated files
 clean:
 	rm -rf $(BUILDDIR) $(BINDIR)
