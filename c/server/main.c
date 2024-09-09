@@ -5,19 +5,18 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
-#define PORT 8080
+#include <math.h>
 #define BACKLOG 5
+#define PORT 8080
+
+int int_sqrt(int number);
 
 int main()
 {
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
-    socklen_t client_addr_len = sizeof(client_addr);
-    int received_number, converted_number;
-    int buffer;
+    socklen_t client_len = sizeof(client_addr);
 
-    // Create a TCP socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
     {
@@ -25,12 +24,10 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    // Configure the server address structure
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT); // Convert port number to network byte order
+    server_addr.sin_port = htons(PORT);
 
-    // Bind the socket to the specified port
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("Bind failed");
@@ -38,7 +35,6 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    // Start listening for incoming connections
     if (listen(server_fd, BACKLOG) < 0)
     {
         perror("Listen failed");
@@ -46,10 +42,10 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    printf("Server is listening on port %d...\n", PORT);
+    printf("Server listening on port 8080...\n");
 
-    // Accept a client connection
-    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+    // Accept a connection
+    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
     if (client_fd < 0)
     {
         perror("Accept failed");
@@ -59,37 +55,72 @@ int main()
 
     printf("Client connected.\n");
 
-    // Receive an integer from the client
-    if (recv(client_fd, &buffer, sizeof(buffer), 0) < 0)
+    // Buffer: [char action, int num]
+    unsigned char buffer[sizeof(char) + sizeof(int)];
+
+    if (recv(client_fd, buffer, sizeof(buffer), 0) < 0)
     {
-        perror("Failed to receive data");
+        perror("Receive failed");
         close(client_fd);
         close(server_fd);
         exit(EXIT_FAILURE);
     }
 
-    // Convert received data from network byte order to host byte order
-    received_number = ntohl(buffer);
-    printf("Received number: %d\n", received_number);
+    char action = buffer[0];
+    int number;
+    memcpy(&number, buffer + sizeof(char), sizeof(int));
+    number = ntohl(number);
 
-    // code
-
-    converted_number = htonl(received_number); // Convert back to network byte order
-
-    // Send the number back to the client
-    if (send(client_fd, &converted_number, sizeof(converted_number), 0) < 0)
+    int res;
+    if (action == '1')
     {
-        perror("Failed to send data");
+        res = int_sqrt(number);
+        if (res < 0)
+        {
+            perror("Sqrt failed");
+            close(client_fd);
+            close(server_fd);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (action == '2')
+    {
+        res = number * number;
+    }
+    else
+    {
+        perror("Unsupported operation");
         close(client_fd);
         close(server_fd);
         exit(EXIT_FAILURE);
     }
 
-    printf("Sent number back to the client.\n");
+    printf("Received char: '%c' and int: %d\n", action, number);
+
+    // Send the result back to the client
+    int network_res = htonl(res); // Convert result to network byte order
+    if (send(client_fd, &network_res, sizeof(int), 0) < 0)
+    {
+        perror("Send failed");
+        close(client_fd);
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
 
     // Close the sockets
     close(client_fd);
     close(server_fd);
 
     return 0;
+}
+
+int int_sqrt(int number)
+{
+    if (number < 0)
+    {
+        return -1;
+    }
+
+    double sqrt_result = sqrt((double)number);
+    return (int)round(sqrt_result);
 }

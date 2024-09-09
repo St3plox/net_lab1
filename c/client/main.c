@@ -7,13 +7,14 @@
 #include <unistd.h>
 #include <string.h>
 
+#define ADDRESS "127.0.0.1"
+#define PORT 8080
+
 int main(int argc, char const *argv[])
 {
-    // Declare the necessary variables
     int sock_fd;
     struct sockaddr_in server_addr;
     int received_number;
-    int buffer;
 
     // Create a TCP socket
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -23,18 +24,15 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // Specify the server address
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(8080); // The port your server is running on
+    server_addr.sin_port = htons(PORT);
 
-    // Convert the IP address from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, ADDRESS, &server_addr.sin_addr) <= 0)
     {
         perror("Invalid address or Address not supported");
         exit(EXIT_FAILURE);
     }
 
-    // Connect to the server
     if (connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("Connection failed");
@@ -44,31 +42,41 @@ int main(int argc, char const *argv[])
 
     printf("Connected to server.\n");
 
-    int n = 123;
-    // scanf("%d", &n);
+    int num;
+    printf("Введите целое число \n");
+    scanf("%d", &num);
 
-    buffer = htonl(n);
+    printf("Введите действие: \n 1 - извлечь корень \n 2 - возвести в квадрат \n");
+    char action;
+    scanf(" %c", &action);
 
-    // Send the number to the server
-    if (send(sock_fd, &buffer, sizeof(buffer), 0) < 0)
+    // Buffer: [char action, int num]
+    unsigned char buffer[sizeof(char) + sizeof(int)];
+    buffer[0] = action;
+
+    int network_int_value = htonl(num);
+    memcpy(buffer + sizeof(char), &network_int_value, sizeof(int));
+
+    if (send(sock_fd, buffer, sizeof(buffer), 0) < 0)
     {
-        perror("Failed to send number");
+        perror("Failed to send data");
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
 
-    printf("Sent number: %d\n", n);
+    printf("Sent action: %c and number: %d\n", action, num);
 
     // Receive the response from the server
-    if (recv(sock_fd, &buffer, sizeof(buffer), 0) < 0)
+    if (recv(sock_fd, buffer, sizeof(buffer), 0) < 0)
     {
         perror("Failed to receive data");
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
 
-    // Convert the received number from network byte order to host byte order
-    received_number = ntohl(buffer);
+    memcpy(&received_number, buffer, sizeof(int));
+    received_number = ntohl(received_number);
+
     printf("Received number: %d\n", received_number);
 
     // Close the socket

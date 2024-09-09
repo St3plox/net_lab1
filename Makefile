@@ -4,6 +4,7 @@
 # Compiler and flags
 CC = gcc
 CFLAGS = -Wall -g
+LDFLAGS = -lm  # Linker flags for the math library
 
 # Directories
 CSRC_DIR = c
@@ -39,15 +40,13 @@ $(BUILDDIR):
 server: $(SERVER_BIN)
 
 $(SERVER_BIN): $(SERVER_SRC) | $(BINDIR)
-	$(CC) $(CFLAGS) -o $(SERVER_BIN) $(SERVER_SRC)
-	@echo "Server built successfully!"
+	$(CC) $(CFLAGS) -o $(SERVER_BIN) $(SERVER_SRC) $(LDFLAGS)
 
 # Compile and build the client executable
 client: $(CLIENT_BIN)
 
 $(CLIENT_BIN): $(CLIENT_SRC) | $(BINDIR)
-	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC)
-	@echo "Client built successfully!"
+	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC) $(LDFLAGS)
 
 # Run the server
 run-server: server
